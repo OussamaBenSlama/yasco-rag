@@ -1,0 +1,9 @@
+{"page_id": "B1", "tier": "BRONZE", "publication_date": "1954-12-18", "layout": "Plain two-column prose: an essay on the courts", "image": "images/B1.png", "passages": 10}
+{"page_id": "B2", "tier": "BRONZE", "publication_date": "1954-12-18", "layout": "Plain two-column prose: the audit office's powers", "image": "images/B2.png", "passages": 23}
+{"page_id": "B3", "tier": "BRONZE", "publication_date": "1954-12-25", "layout": "Plain two-column prose: audit offices abroad", "image": "images/B3.png", "passages": 20}
+{"page_id": "S1", "tier": "SILVER", "publication_date": "1954-12-18", "layout": "Section banner, headings, a preamble and numbered law articles", "image": "images/S1.png", "passages": 24}
+{"page_id": "S2", "tier": "SILVER", "publication_date": "1954-12-25", "layout": "Large heading over numbered regulations", "image": "images/S2.png", "passages": 18}
+{"page_id": "S3", "tier": "SILVER", "publication_date": "1954-12-25", "layout": "Law articles with a long numbered list of powers", "image": "images/S3.png", "passages": 21}
+{"page_id": "G1", "tier": "GOLD", "publication_date": "1954-12-18", "layout": "Front page: masthead, headline, boxed notice, columns", "image": "images/G1.png", "passages": 13}
+{"page_id": "G2", "tier": "GOLD", "publication_date": "1954-12-25", "layout": "Mixed news page: a names list, short notices and a table", "image": "images/G2.png", "passages": 16}
+{"page_id": "G3", "tier": "GOLD", "publication_date": "1954-12-18", "layout": "A monthly report laid out as figures and tables", "image": "images/G3.png", "passages": 31}

@@ -1,0 +1,12 @@
+{"query_id": "q01", "tier": "B", "type": "fact", "query": "متى أسست أول محكمة مستقلة في الكويت؟", "gloss": "When was Kuwait's first independent court founded?", "relevant_passages": ["B1-p05"]}
+{"query_id": "q02", "tier": "B", "type": "topic", "query": "ديوان المحاسبة في بلجيكا", "gloss": "The audit office in Belgium", "relevant_passages": ["B3-p01", "B3-p02", "B3-p03", "B3-p04", "B3-p05", "B3-p06", "B3-p07"]}
+{"query_id": "q03", "tier": "B", "type": "fact", "query": "من يختار مراقب المصروفات المعتمدة في فرنسا؟", "gloss": "Who chooses the controller of approved expenditure in France?", "relevant_passages": ["B2-p19"]}
+{"query_id": "q04", "tier": "S", "type": "exact_citation", "query": "قانون البلدية المادة ٢٥", "gloss": "Municipality law, article 25", "relevant_passages": ["S3-p17"]}
+{"query_id": "q05", "tier": "S", "type": "fact", "query": "كم شخصا يجوز للكفيل الكويتي أن يكفل؟", "gloss": "How many people may a Kuwaiti sponsor take on?", "relevant_passages": ["S2-p11"]}
+{"query_id": "q06", "tier": "S", "type": "list", "query": "اختصاصات البلدية حسب المادة الثانية", "gloss": "The municipality's responsibilities under article 2", "relevant_passages": ["S1-p10", "S1-p11", "S1-p12", "S1-p13", "S1-p14", "S1-p15", "S1-p16", "S1-p17", "S1-p18", "S1-p19", "S1-p20"]}
+{"query_id": "q07", "tier": "G", "type": "table_row", "query": "موعد اختيار القسائم للأرقام الفائزة من ٤١ إلى ٥٠", "gloss": "When do lottery winners numbered 41 to 50 choose their plots?", "relevant_passages": ["G2-p13"]}
+{"query_id": "q08", "tier": "G", "type": "table_row", "query": "ما حمولة الباخرة كارسياكا ومن وكيلها؟", "gloss": "What was the ship Karsiaka carrying, and who was its agent?", "relevant_passages": ["G3-p23"]}
+{"query_id": "q09", "tier": "G", "type": "fact", "query": "متى يصبح نظام الموظفين والتقاعد نافذ المفعول؟", "gloss": "When does the civil service and pension law take effect?", "relevant_passages": ["G1-p04", "G1-p05"]}
+{"query_id": "q10", "tier": "X", "type": "exhaustive", "query": "كل ما نشر عن ديوان المحاسبة", "gloss": "Everything published about the audit office", "relevant_pages": ["B2", "B3"]}
+{"query_id": "q11", "tier": "X", "type": "date_range", "query": "كل ما نشر في عدد ٢٥ ديسمبر ١٩٥٤", "gloss": "Everything in the issue of 25 December 1954", "relevant_pages": ["B3", "S2", "S3", "G2"]}
+{"query_id": "q12", "tier": "X", "type": "abstain", "query": "كم طائرة تملك مدرسة الطيران في الكويت؟", "gloss": "How many aircraft does the Kuwait flying school own?", "relevant_passages": [], "expected": "abstain"}
