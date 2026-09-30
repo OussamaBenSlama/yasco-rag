@@ -17,75 +17,93 @@ This coding task builds a minimum viable retrieval-augmented generation (RAG) sy
 
 ## Steps
 
-1. **Prepare the indexes.** `normalize.py` normalizes Arabic text. `bm25.py` builds the lexical index. `embed.py` encodes passages and stores their vectors and metadata in Chroma.
-2. **Retrieve passages.** `retrieve.py` selects a strategy from the query type:
-   - `fact`: combine BM25 and reranked dense results with reciprocal rank fusion (RRF).
-   - `topic`: combine BM25, fuzzy token matches, and reranked dense results with RRF. The strategy adds the BM25 ranking twice to give lexical matches more weight.
-   - `exact_citation`: combine BM25 and fuzzy matches with RRF.
-   - `list` and `exhaustive`: combine BM25, fuzzy, and reranked dense results. Select pages with scores at least half of the best page score, then rerank the passages from those pages.
-   - `table_row`: combine BM25 and reranked dense results. Add BM25 twice to give it more weight, then prefer passages marked as table rows when any are found.
-   - `date_range`: extract a date from the query and select pages whose publication date matches it. Rank matching pages with hybrid retrieval. A month-only date matches every date in that month.
-   - `abstain`: run the `fact` hybrid strategy and compare its top fused score with the `0.02` threshold. Return the top results when the score is above the threshold. Otherwise, return an empty result and abstain.
-3. **Generate an answer.** `generate.py` adds retrieved passages to the system prompt and sends the prompt and chat history to the language model. The Gradio app displays the chat and the context-filled system prompt.
+1. **Prepare the indexes.**
+
+   - Normalize Arabic text by removing diacritics and tatweel and applying character normalization.
+   - Build the lexical index using the BM25 algorithm.
+   - Encode passages and store their vectors and metadata in Chroma DB.
+
+2. **Retrieve passages.**
+
+   - Make a query router that selects a strategy based on the query type:
+     - `fact`: combine BM25 and reranked dense results with reciprocal rank fusion (RRF).
+     - `topic`: combine BM25, fuzzy token matches, and reranked dense results with RRF. BM25 is included twice to give lexical matches more weight.
+     - `exact_citation`: combine BM25 and fuzzy matches with RRF.
+     - `list` and `exhaustive`: combine BM25, fuzzy, and reranked dense results with RRF. Select pages whose score is at least half of the best page score, then rerank the passages from the selected pages.
+     - `table_row`: combine BM25 and reranked dense results with RRF. BM25 is included twice to give it more weight. If any table-row passages are found in the fused results, return those table rows instead of the full fused result.
+     - `date_range`: extract a date from the query and select pages whose publication date matches it. A month-only date matches every date in that month. Matching pages are then ranked using the maximum hybrid retrieval score found for each page.
+     - `abstain`: use the same hybrid retrieval strategy as `fact`, then compare the top fused score with the abstain threshold. If the score is less than or equal to the threshold, mark the query as abstain.
+
+3. **Generate an answer.**
+
+   - Use a tiny model to respond to queries based on the retrieved passages.
+   - Build a small chatbot UI using Gradio for demonstration.
 
 ## Demonstration
-
-Run the app with `python src/generate.py`. The app requires CUDA and the configured model and indexes. The image shows the chat and system prompt panel.
 
 ![Gradio demonstration](demo/screenshot.png)
 
 ## Evaluation
 
-Run `python src/evals.py` to evaluate the query set. The report is written to `results/evaluation.txt`. The default run uses 20 dense candidates and reranks 5 or 10 results. Recall@5 and Recall@10 measure the share of relevant IDs in the first 5 or 10 results. MRR measures the rank of the first relevant ID. The evaluator uses relevant pages when the query provides page labels; otherwise, it uses relevant passages. The report also scores expected abstentions as correct or incorrect and gives an abstention accuracy. It excludes abstention queries from recall and MRR.
+### Per query metrics
 
-The tables below show the report for `k_embed=20`. A dash means that the metric does not apply.
+| query | type | tier | k_embed | recall@10 | recall@5 | mrr | abstain_correct@5 | abstain_correct@10 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| q01 | fact | B | 20 | 1.000 | 1.000 | 1.000 | - | - |
+| q02 | topic | B | 20 | 0.429 | 0.286 | 1.000 | - | - |
+| q03 | fact | B | 20 | 1.000 | 1.000 | 1.000 | - | - |
+| q04 | exact_citation | S | 20 | 1.000 | 1.000 | 1.000 | - | - |
+| q05 | fact | S | 20 | 1.000 | 1.000 | 1.000 | - | - |
+| q06 | list | S | 20 | 0.364 | 0.182 | 1.000 | - | - |
+| q07 | table_row | G | 20 | 1.000 | 1.000 | 1.000 | - | - |
+| q08 | table_row | G | 20 | 1.000 | 1.000 | 0.333 | - | - |
+| q09 | fact | G | 20 | 1.000 | 1.000 | 1.000 | - | - |
+| q10 | exhaustive | X | 20 | 1.000 | 1.000 | 1.000 | - | - |
+| q11 | date_range | X | 20 | 1.000 | 1.000 | 1.000 | - | - |
+| q12 | abstain | X | 20 | - | - | - | 1 | 1 |
 
-### Per-query metrics
+### Per tier metrics
 
-| Query | Type | Tier | Recall@10 | Recall@5 | MRR |
-| --- | --- | --- | ---: | ---: | ---: |
-| q01 | fact | B | 1.000 | 1.000 | 1.000 |
-| q02 | topic | B | 0.429 | 0.286 | 1.000 |
-| q03 | fact | B | 1.000 | 1.000 | 1.000 |
-| q04 | exact_citation | S | 1.000 | 1.000 | 1.000 |
-| q05 | fact | S | 1.000 | 1.000 | 1.000 |
-| q06 | list | S | 0.364 | 0.182 | 1.000 |
-| q07 | table_row | G | 1.000 | 1.000 | 1.000 |
-| q08 | table_row | G | 1.000 | 1.000 | 0.333 |
-| q09 | fact | G | 1.000 | 1.000 | 1.000 |
-| q10 | exhaustive | X | 1.000 | 1.000 | 1.000 |
-| q11 | date_range | X | 1.000 | 1.000 | 1.000 |
-| q12 | abstain | X | - | - | - |
+| tier | k_embed | n | recall@10 | recall@5 | mrr |
+| --- | --- | --- | --- | --- | --- |
+| B | 20 | 3 | 0.810 | 0.762 | 1.000 |
+| G | 20 | 3 | 1.000 | 1.000 | 0.778 |
+| S | 20 | 3 | 0.788 | 0.727 | 1.000 |
+| X | 20 | 2 | 1.000 | 1.000 | 1.000 |
 
-### Per-tier metrics
+### Per query type metrics
 
-| Tier | Queries | Recall@10 | Recall@5 | MRR |
-| --- | ---: | ---: | ---: | ---: |
-| B | 3 | 0.810 | 0.762 | 1.000 |
-| G | 3 | 1.000 | 1.000 | 0.778 |
-| S | 3 | 0.788 | 0.727 | 1.000 |
-| X | 2 | 1.000 | 1.000 | 1.000 |
-
-### Per-type metrics
-
-| Type | Queries | Recall@10 | Recall@5 | MRR |
-| --- | ---: | ---: | ---: | ---: |
-| date_range | 1 | 1.000 | 1.000 | 1.000 |
-| exact_citation | 1 | 1.000 | 1.000 | 1.000 |
-| exhaustive | 1 | 1.000 | 1.000 | 1.000 |
-| fact | 4 | 1.000 | 1.000 | 1.000 |
-| list | 1 | 0.364 | 0.182 | 1.000 |
-| table_row | 2 | 1.000 | 1.000 | 0.667 |
-| topic | 1 | 0.429 | 0.286 | 1.000 |
+| type | k_embed | n | recall@10 | recall@5 | mrr |
+| --- | --- | --- | --- | --- | --- |
+| date_range | 20 | 1 | 1.000 | 1.000 | 1.000 |
+| exact_citation | 20 | 1 | 1.000 | 1.000 | 1.000 |
+| exhaustive | 20 | 1 | 1.000 | 1.000 | 1.000 |
+| fact | 20 | 4 | 1.000 | 1.000 | 1.000 |
+| list | 20 | 1 | 0.364 | 0.182 | 1.000 |
+| table_row | 20 | 2 | 1.000 | 1.000 | 0.667 |
+| topic | 20 | 1 | 0.429 | 0.286 | 1.000 |
 
 ### Special query types
 
-- **Exhaustive:** q10 asks for everything published about the audit office. The system uses the page-selection strategy for `list` queries. The gold labels are pages B2 and B3. Both pages appear in the top 5 and top 10, so Recall@5, Recall@10, and MRR are 1.000.
-- **Date range:** q11 asks for everything in the issue dated 25 December 1954. The system extracts the date, selects pages with that publication date, and ranks those pages. All four gold pages appear in the top 5 and top 10, so all three metrics are 1.000.
-- **Abstain:** q12 asks for information that has no relevant passages in the data. The system runs hybrid retrieval and compares the top fused score with the abstention threshold. The evaluator scores the result as correct when the system returns an empty result. It reports this score in the abstention metrics and excludes q12 from recall and MRR.
+- **Exhaustive:** The system uses a page-selection strategy. It combines BM25, fuzzy, and reranked dense results with RRF. It gets the highest-scoring page result, calculates a threshold that is currently half of that score, then selects pages with scores at least as high as the threshold. Finally, it reranks all passages belonging to the selected pages.
 
-### Three observed failures
+- **Date range:** The system extracts the date from the query using a rule-based approach, selects pages whose publication date matches it, and ranks those pages using hybrid retrieval scores. For a month-only date, all pages whose publication date starts with that month are selected.
 
-1. **Topic coverage (q02):** Recall@10 is 0.429 and Recall@5 is 0.286. The first relevant passage ranks first, as shown by MRR 1.000, but the result list misses several relevant passages.
-2. **List coverage (q06):** Recall@10 is 0.364 and Recall@5 is 0.182. The first relevant passage ranks first, but the result list misses most of the relevant passages.
-3. **Table-row ordering (q08):** Recall@5 and Recall@10 are 1.000, but MRR is 0.333. The relevant page appears in the results, but it ranks third. The strategy needs better ranking for this query.
+- **Abstain:** It uses the same hybrid BM25 + reranked dense strategy as `fact`, then compares the top fused score with the abstain threshold. If the score is less than or equal to the threshold, the query is marked as abstain. The choice of the threshold is heuristic for this demo. For production, we may use another method or optimize it.
+
+## Observed failures
+
+1. **Topic coverage:** Recall@10 is 0.429 and Recall@5 is 0.286. The first relevant passage ranks first, as shown by MRR 1.000, but the result list misses several relevant passages. This is mainly because there are many relevant passages.
+
+2. **List coverage:** Recall@10 is 0.364 and Recall@5 is 0.182. The first relevant passage ranks first, but the result list misses most of the relevant passages. Same problem as topic.
+
+3. **Table-row ordering:** Even though I get good results for Recall@5 and Recall@10, both are 1.000, I didn't do any special work for table layouts. The current strategy only prefers passages marked as table rows when they appear in the fused results. A query asking to summarize a table, for example, will probably fail because the system does not reconstruct the table structure. If two similar tables contain similar information, this may also cause failures.
+
+## Week Plan
+
+If I had one more week, I would:
+
+- Experiment with other strategies for topic and list coverage, such as an expanding-window strategy.
+- Handle table layouts by reconstructing tables from consecutive table rows.
+- Use a tiny LLM to describe a given table and, if possible, describe a page (e.g., "this page talks about ..."). Then, for topic and list queries, I could search for the specific page first and retrieve its content as context.
+- Make date-range extraction more robust to handle Hijri dates and date-range periods.
