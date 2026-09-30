@@ -107,3 +107,14 @@ If I had one more week, I would:
 - Handle table layouts by reconstructing tables from consecutive table rows.
 - Use a tiny LLM to describe a given table and, if possible, describe a page (e.g., "this page talks about ..."). Then, for topic and list queries, I could search for the specific page first and retrieve its content as context.
 - Make date-range extraction more robust to handle Hijri dates and date-range periods.
+
+
+## Run the full pipeline
+
+From the repository root, run:
+
+```bash
+python run.py
+```
+
+The script installs `requirements.txt`, rebuilds the BM25 and dense indexes, writes the retrieval evaluation to `results/evaluation.txt`, and then starts the Gradio app. 
