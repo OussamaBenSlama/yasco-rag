@@ -243,12 +243,26 @@ def strategy_date_range(idx: Indexes, query: str, k_embed: int, k_rerank: int) -
         page_id = idx.meta_by_id[pid]["page_id"]
         if page_id in candidate_pages:
             page_score[page_id] = max(page_score[page_id], score)
-    # Pages with no lexical/semantic hit still count as "published that day".
     for page_id in candidate_pages:
         page_score.setdefault(page_id, 0.0)
 
     ranked = sorted(page_score.items(), key=lambda x: x[1], reverse=True)
     return RetrievalResult("pages", ranked, note=f"date filter={date}, {len(candidate_pages)} candidate pages")
+
+
+def strategy_abstain(idx: Indexes, query: str, k_embed: int, k_rerank: int) -> RetrievalResult:
+    """Use hybrid retrieval and abstain when its best fused score is too low."""
+    result = strategy_fact(idx, query, k_embed, k_rerank)
+    top_score = result.items[0][1] if result.items else 0.0
+    if top_score <= ABSTAIN_THRESHOLD:
+        return RetrievalResult(
+            "abstain", [],
+            note=f"top fused score={top_score:.4f} <= threshold={ABSTAIN_THRESHOLD:.4f}",
+        )
+    return RetrievalResult(
+        "passages", result.items,
+        note=f"hybrid retrieval; top fused score={top_score:.4f} > threshold={ABSTAIN_THRESHOLD:.4f}",
+    )
 
 
 STRATEGIES = {
@@ -259,7 +273,7 @@ STRATEGIES = {
     "table_row": strategy_table_row,
     "exhaustive": strategy_page_rerank,
     "date_range": strategy_date_range,
-    "abstain": strategy_fact,
+    "abstain": strategy_abstain,
 }
 
 

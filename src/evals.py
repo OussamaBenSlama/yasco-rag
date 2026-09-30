@@ -18,12 +18,12 @@ if TYPE_CHECKING:
 
 RRF_K = 60
 DEFAULT_K = 10
-ABSTAIN_THRESHOLD = 0.35
+ABSTAIN_THRESHOLD = 0.035
 EXHAUSTIVE_SCORE_RATIO = 0.5
 FUZZY_SCORE_THRESHOLD = 20
-RERANKER_MODEL = "jinaai/jina-reranker-v2-base-multilingual"
-DEFAULT_K_EMBED = 25
-K_EMBED_VALUES = (20)
+RERANKER_MODEL = "Qwen/Qwen3-Reranker-0.6B"
+DEFAULT_K_EMBED = 20
+K_EMBED_VALUES = (20,)
 K_RERANK_VALUES = (5, 10)
 
 
@@ -55,8 +55,10 @@ def evaluate_query(
     _, result = retrieve(indexes, query["query"], qtype=query_type,
                          k_embed=k_embed, k_rerank=k_rerank)
     expected_abstain = query.get("expected") == "abstain"
+    abstain_correct = None
 
     if expected_abstain:
+        abstain_correct = result.kind == "abstain"
         recall5 = recall10 = mrr = None
     else:
         relevant_pages = set(query.get("relevant_pages") or [])
@@ -93,6 +95,7 @@ def evaluate_query(
         "recall@5": recall5,
         "mrr": mrr,
         "expected_abstain": expected_abstain,
+        "abstain_correct": int(abstain_correct) if abstain_correct is not None else None,
     }
 
 
@@ -140,6 +143,21 @@ def combine_pair_rows(rows: list[dict]) -> list[dict]:
             "recall@10": next((row["recall@10"] for row in query_rows if row["k_rerank"] == 10), None),
             "recall@5": next((row["recall@5"] for row in query_rows if row["k_rerank"] == 5), None),
             "mrr": next((row["mrr"] for row in query_rows if row["k_rerank"] == 10), None),
+            "abstain_correct": next(
+                (row.get("abstain_correct") for row in query_rows
+                 if row.get("abstain_correct") is not None),
+                None,
+            ),
+            "abstain_correct@5": next(
+                (row.get("abstain_correct") for row in query_rows
+                 if row["k_rerank"] == 5),
+                None,
+            ),
+            "abstain_correct@10": next(
+                (row.get("abstain_correct") for row in query_rows
+                 if row["k_rerank"] == 10),
+                None,
+            ),
         })
     return combined
 
@@ -164,8 +182,9 @@ def format_table(headers: list[str], rows: list[dict]) -> str:
 def build_report(rows: list[dict]) -> str:
     combined_rows = combine_pair_rows(rows)
     query_rows = [
-        {key: row[key] for key in (
-            "query", "type", "tier", "k_embed", "recall@10", "recall@5", "mrr"
+        {key: row.get(key) for key in (
+            "query", "type", "tier", "k_embed", "recall@10", "recall@5", "mrr",
+            "abstain_correct@5", "abstain_correct@10",
         )}
         for row in combined_rows
     ]
@@ -173,12 +192,40 @@ def build_report(rows: list[dict]) -> str:
     type_headers = ["type", "k_embed", "n", "recall@10", "recall@5", "mrr"]
     sections = [
         ("Per query metrics", format_table(
-            ["query", "type", "tier", "k_embed", "recall@10", "recall@5", "mrr"], query_rows
+            ["query", "type", "tier", "k_embed", "recall@10", "recall@5", "mrr",
+             "abstain_correct@5", "abstain_correct@10"], query_rows
         )),
         ("Per tier metrics", format_table(tier_headers, aggregate(rows, "tier"))),
         ("Per query type metrics", format_table(type_headers, aggregate(rows, "type"))),
+        ("Abstention metrics", format_table(
+            ["k_embed", "k_rerank", "queries", "correct", "accuracy"],
+            _abstention_summary(rows),
+        )),
     ]
     return "\n\n".join(f"{title}\n{table}" for title, table in sections) + "\n"
+
+
+def _abstention_summary(rows: list[dict]) -> list[dict]:
+    groups: dict[tuple[int, int], list[dict]] = {}
+    for row in rows:
+        if row["expected_abstain"] and row.get("abstain_correct") is not None:
+            key = (row["k_embed"], row["k_rerank"])
+            groups.setdefault(key, []).append(row)
+
+    summaries = []
+    for (k_embed, k_rerank), group_rows in sorted(groups.items()):
+        # Count each query once for each retrieval configuration.
+        outcomes = {row["query"]: row["abstain_correct"] for row in group_rows}
+        correct = sum(outcomes.values())
+        total = len(outcomes)
+        summaries.append({
+            "k_embed": k_embed,
+            "k_rerank": k_rerank,
+            "queries": total,
+            "correct": correct,
+            "accuracy": round(correct / total, 3) if total else None,
+        })
+    return summaries
 
 
 def main():
